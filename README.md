@@ -28,7 +28,7 @@ This formula calculates the cumulative balance by summing the amounts made and s
 * = (HOUR(D2) + MINUTE(D2)/60 + SECOND(D2)/3600) - (HOUR(C2) + MINUTE(C2)/60 + SECOND(C2)/3600)
 This formula calculates the duration of the event in hours.
 
-###### Debits Sheet
+### Debits Sheet
 
 Columns:
 
