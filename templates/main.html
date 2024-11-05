@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cafe Volunteer Portal</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<style>
+    /* General Styles */
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    background-color: #f5f5f5;
+}
+
+.container {
+    text-align: center;
+    margin-top: 50px;
+}
+
+h1, h2 {
+    color: #333;
+}
+
+p {
+    color: #666;
+}
+
+.button-group {
+    margin: 20px;
+}
+
+.button {
+    text-decoration: none;
+    color: white;
+    background-color: #007bff;
+    padding: 10px 20px;
+    border-radius: 5px;
+    margin: 10px;
+    display: inline-block;
+    transition: background-color 0.3s;
+}
+
+.button:hover {
+    background-color: #0056b3;
+}
+
+/* Form Styles */
+.form-container {
+    width: 300px;
+    padding: 20px;
+    margin-top: 20px;
+    background-color: #ffffff;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+}
+
+label {
+    font-weight: bold;
+    display: block;
+    margin-top: 10px;
+}
+
+input, select, button {
+    width: 100%;
+    padding: 8px;
+    margin-top: 5px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    box-sizing: border-box;
+}
+
+button {
+    background-color: #28a745;
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: #218838;
+}
+
+#signup-message, #confirm-message {
+    color: #ff0000;
+    margin-top: 10px;
+    font-weight: bold;
+}
+
+</style>
+<body>
+    <!-- Home Page -->
+    <div class="container">
+        <header>
+            <h1>Welcome to the Cafe Volunteer Portal</h1>
+            <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+            <p>Sign up to volunteer or confirm your shift attendance.</p>
+        </header>
+        <div class="button-group">
+            <a href="#sign-up" class="button">Sign Up for a Shift</a>
+            <a href="#confirm" class="button">Confirm Attendance</a>
+        </div>
+    </div>
+
+    <!-- Sign-Up Page -->
+    <section id="sign-up" class="form-container">
+        <h2>Shift Sign-Up</h2>
+        <form id="signup-form">
+            <label for="name">Name</label>
+            <input type="text" id="name" name="name" required>
+
+            <label for="email">Email</label>
+            <input type="email" id="email" name="email" required>
+
+            <label for="shift-date">Shift Date (Mon-Fri)</label>
+            <input type="date" id="shift-date" name="shift-date" required>
+
+            <!-- Shift Time Selection with Valid Options Only -->
+            <label for="shift-time">Shift Time</label>
+            <select id="shift-time" name="shift-time">
+                <option value="14:00-17:00">14:00 - 17:00</option>
+                <option value="14:30-17:00">14:30 - 17:00</option>
+                <option value="15:00-17:00">15:00 - 17:00</option>
+                <option value="15:30-17:00">15:30 - 17:00</option>
+                <option value="16:00-17:00">16:00 - 17:00</option>
+            </select>
+
+
+            <button type="submit">Sign Up</button>
+            <p id="signup-message"></p>
+        </form>
+    </section>
+
+    <!-- Confirmation Page -->
+    <section id="confirm" class="form-container">
+        <h2>Shift Confirmation</h2>
+        <p>Confirm your attendance for today's shift.</p>
+        <button id="confirm-button">Confirm Attendance</button>
+        <p id="confirm-message"></p>
+    </section>
+</body>
+</html>
