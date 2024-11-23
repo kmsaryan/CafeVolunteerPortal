@@ -1,132 +1,154 @@
-from flask import Flask, render_template, request, flash, redirect, url_for
-import openpyxl
-from datetime import datetime
+from flask import Flask, render_template, request, redirect, url_for
+import sqlite3
+from datetime import datetime, timedelta
 
 app = Flask(__name__)
-app.secret_key = 'your_secret_key'  # necessary for flash messages
 
-# Path to the Excel file
-EXCEL_FILE_PATH = 'static/files/Credits and Debits Expen.xlsx'
+DATABASE = "db.sqlite"
 
-def load_excel():
-    """ Load the Excel file and return the active worksheet """
-    workbook = openpyxl.load_workbook(EXCEL_FILE_PATH)
-    return workbook
+# Helper function to connect to the database
+def get_db_connection():
+    conn = sqlite3.connect(DATABASE)
+    conn.row_factory = sqlite3.Row
+    return conn
 
-def save_excel(workbook):
-    """ Save changes to the Excel file """
-    workbook.save(EXCEL_FILE_PATH)
+# Home route
+@app.route("/")
+def index():
+    return render_template("home.html")
 
-@app.route('/')
-def home():
-    return render_template('main.html')
+# Route to view signups
+@app.route("/signups")
+def view_signups():
+    conn = get_db_connection()
+    signups = conn.execute("SELECT * FROM Signups").fetchall()
+    conn.close()
+    return render_template("signups.html", signups=signups)
 
-@app.route('/signup', methods=['POST'])
+# Route to handle signup form
+@app.route("/signup", methods=["GET", "POST"])
 def signup():
-    # Retrieve form data
-    name = request.form['name']
-    email = request.form['email']
-    shift_date = request.form['shift-date']
-    shift_time = request.form['shift-time']
+    if request.method == "POST":
+        name = request.form["name"]
+        date = request.form["date"]
+        shift_time = request.form['shift-time']
+        start_time, end_time = shift_time.split('-')
 
-    # Parse the shift time to calculate hours worked
-    start_time, end_time = shift_time.split('-')
-    start_hour = int(start_time.split(':')[0])
-    end_hour = int(end_time.split(':')[0])
-    hours_worked = end_hour - start_hour  # Calculate based on 17:00 as the closing time
+        # Calculate duration
+        start_time_dt = datetime.strptime(start_time.strip(), '%H:%M')
+        end_time_dt = datetime.strptime(end_time.strip(), '%H:%M')
+        duration = (end_time_dt - start_time_dt).seconds / 3600
 
-    # Calculate points
-    points_earned = hours_worked * 20
+        conn = get_db_connection()
+        cursor = conn.cursor()
 
-    # Load and update the Excel sheet
-    workbook = load_excel()
-    credits_sheet = workbook['Credits']
-    # Parse the shift date
-    shift_date_obj = datetime.strptime(shift_date, '%Y-%m-%d')
+        # Check if the volunteer worked on the previous day
+        last_entry = cursor.execute("""
+            SELECT date FROM Signups WHERE name = ? ORDER BY date DESC LIMIT 1
+        """, (name,)).fetchone()
 
-    # Check if the volunteer has worked recently
-    for row in credits_sheet.iter_rows(min_row=2, values_only=True):  # Assuming first row is headers
-        if row[0] == name and row[1] == email:
-            last_shift_date = datetime.strptime(row[2], '%Y-%m-%d')
-            if (shift_date_obj - last_shift_date).days < 7:
-                flash("You need a 7-day gap between shifts. Please select a different date.")
-                return redirect(url_for('home'))
+        if last_entry:
+            last_date = datetime.strptime(last_entry["date"], "%Y-%m-%d")
+            signup_date = datetime.strptime(date, "%Y-%m-%d")
+            if (signup_date - last_date).days == 1:
+                conn.close()
+                return "Volunteer cannot work on consecutive days!", 400
 
-    # Append new signup entry in Excel with hours worked and points earned
-    credits_sheet.append([name, email, shift_date, shift_time, points_earned, 0, hours_worked])
-    save_excel(workbook)
-    flash("Sign-up successful! You will earn {} points for this shift.".format(points_earned))
-    return redirect(url_for('home'))
+        # Insert the new signup
+        cursor.execute("""
+            INSERT INTO Signups (name, date, start_time, end_time) 
+            VALUES (?, ?, ?, ?)
+        """, (name, date, start_time, end_time))
+        conn.commit()
+        conn.close()
+
+        return redirect(url_for("view_signups"))
+
+    return render_template("signup.html")
+
+# Route to confirm attendance and update Credits table
+@app.route("/confirm/<int:signup_id>", methods=["POST"])
+def confirm_attendance(signup_id):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Fetch signup details
+    signup = cursor.execute("SELECT * FROM Signups WHERE id = ?", (signup_id,)).fetchone()
+    if not signup:
+        conn.close()
+        return "Signup not found!", 404
+
+    if signup["attendance"] == "Confirmed":
+        conn.close()
+        return "Attendance already confirmed!", 400
+
+    # Calculate credits earned
+    start_time = datetime.strptime(signup["start_time"], "%H:%M")
+    end_time = datetime.strptime(signup["end_time"], "%H:%M")
+    duration = (end_time - start_time).seconds / 3600
+    amount_made = duration * 20
+
+    # Get the last balance from the Credits table
+    last_balance = cursor.execute("""
+        SELECT balance FROM Credits WHERE name = ? ORDER BY date DESC LIMIT 1
+    """, (signup["name"],)).fetchone()
+    new_balance = (last_balance["balance"] if last_balance else 0) + amount_made
+
+    # Update attendance and add entry to Credits
+    cursor.execute("UPDATE Signups SET attendance = 'Confirmed' WHERE id = ?", (signup_id,))
+    cursor.execute("""
+        INSERT INTO Credits (name, date, amount_made, balance) VALUES (?, ?, ?, ?)
+    """, (signup["name"], signup["date"], amount_made, new_balance))
+    conn.commit()
+    conn.close()
+
+    return redirect(url_for("view_signups"))
+
+# Route to handle debit transactions
+@app.route("/debit", methods=["POST","GET"])
+def add_debit():
+    name = request.form["name"]
+    date = request.form["date"]
+    amount_spent = float(request.form["amount_spent"])
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Get the last balance from the Credits table
+    last_balance = cursor.execute("""
+        SELECT balance FROM Credits WHERE name = ? ORDER BY date DESC LIMIT 1
+    """, (name,)).fetchone()
+    if not last_balance or last_balance["balance"] < amount_spent:
+        conn.close()
+        return "Insufficient balance!", 400
+
+    # Calculate the new balance
+    new_balance = last_balance["balance"] - amount_spent
+
+    # Add entry to Debits table
+    cursor.execute("""
+        INSERT INTO Debits (name, date, amount_spent, balance) VALUES (?, ?, ?, ?)
+    """, (name, date, amount_spent, new_balance))
+    conn.commit()
+    conn.close()
+    return render_template("debit_entry.html")
 
 
-@app.route('/confirm', methods=['POST'])
-def confirm_attendance():
-    name = request.form['name']
-    shift_date = request.form['shift-date']
+# Route to view debits
+@app.route("/debits")
+def view_debits():
+    conn = get_db_connection()
+    debits = conn.execute("SELECT * FROM Debits").fetchall()
+    conn.close()
+    return render_template("debits.html", debits=debits)
 
-    # Verify that confirmation is allowed only during working hours
-    current_hour = datetime.now().hour
-    if not (9 <= current_hour <= 17):  # Modify hours if needed
-        flash("Confirmations are only allowed between 9 AM and 5 PM.")
-        return redirect(url_for('home'))
+# Route to view credits
+@app.route("/credits")
+def view_credits():
+    conn = get_db_connection()
+    credits = conn.execute("SELECT * FROM Credits").fetchall()
+    conn.close()
+    return render_template("credits.html", credits=credits)
 
-    # Load and update the Excel sheet for attendance
-    workbook = load_excel()
-    credits_sheet = workbook['Credits']
-    confirmed = False
-
-    # Search for the record in Excel to confirm attendance
-    for row in credits_sheet.iter_rows(min_row=2):  # Assuming first row is headers
-        if row[0].value == name and row[2].value == shift_date:
-            row[4].value = 'Confirmed'  # Update attendance status
-            confirmed = True
-            break
-
-    if confirmed:
-        save_excel(workbook)
-        flash("Attendance confirmed!")
-    else:
-        flash("No matching record found for confirmation.")
-    
-    return redirect(url_for('home'))
-
-
-@app.route('/debit', methods=['POST'])
-def debit():
-    name = request.form['name']
-    debit_amount = float(request.form['debit-amount'])  # Assuming it's a valid number
-    debit_date = request.form['debit-date']
-
-    # Load and update the Excel sheet for debits
-    workbook = load_excel()
-    credits_sheet = workbook['Credits']
-    debits_sheet = workbook['Debits']
-    
-    # Find the volunteer's current balance
-    current_balance = 0
-    for row in credits_sheet.iter_rows(min_row=2, values_only=True):  # Assuming first row is headers
-        if row[0] == name:
-            current_balance = row[4]
-            break
-
-    # Check if the debit amount is valid (doesn't exceed the balance)
-    if debit_amount <= current_balance:
-        # Add the debit to the "Debits" sheet
-        debits_sheet.append([name, debit_date, debit_amount])
-
-        # Update balance in "Credits" sheet
-        for row in credits_sheet.iter_rows(min_row=2):
-            if row[0].value == name:
-                row[5].value -= debit_amount
-                break
-
-        save_excel(workbook)
-        flash("Debit of {} points successfully processed.".format(debit_amount))
-    else:
-        flash("Insufficient points to complete the debit.")
-    
-    return redirect(url_for('home'))
-
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     app.run(debug=True)

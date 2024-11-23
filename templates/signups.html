@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Volunteer Signups</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Sign Up - Cafe Volunteer Portal</title>
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+
+<body>
+    <h1>Volunteer Signups</h1>
+    <table border="1">
+        <tr>
+            <th>Name</th>
+            <th>Date</th>
+            <th>Start Time</th>
+            <th>End Time</th>
+            <th>Attendance</th>
+            <th>Actions</th>
+        </tr>
+        {% for signup in signups %}
+        <tr>
+            <td>{{ signup.name }}</td>
+            <td>{{ signup.date }}</td>
+            <td>{{ signup.start_time }}</td>
+            <td>{{ signup.end_time }}</td>
+            <td>{{ signup.attendance }}</td>
+            <td>
+                {% if signup.attendance == 'Pending' %}
+                <form method="POST" action="/confirm/{{ signup.id }}">
+                    <button type="submit">Confirm Attendance</button>
+                </form>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+    <a href="/">Back to Home</a>
+</body>
+
+</html>

@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Confirm Attendance - Cafe Volunteer Portal</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <section id="confirm" class="form-container">
+        <h2>Shift Confirmation</h2>
+        <p>Confirm your attendance by entering your name and shift date.</p>
+        
+        <form action="/confirm" method="POST">
+            <label for="name">Name/Namn:</label>
+            <input type="text" id="name" name="name" required>
+        
+            <label for="shift-date">Date/Datum (YYYY-MM-DD):</label>
+            <input type="date" id="shift-date" name="shift-date" required>
+        
+            <button type="submit">Confirm Attendance</button>
+        </form>
+        
+        <p id="confirm-message">{{ confirm_message }}</p>
+    </section>
+</body>
+</html>

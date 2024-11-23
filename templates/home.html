@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome - Cafe Volunteer Portal</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Welcome to the Cafe Volunteer Portal</h1>
+            <p>Sign up to volunteer or confirm your shift attendance.</p>
+        </header>
+        <div class="button-group">
+            <a href="/signup" class="button">Sign Up for a Shift</a><br>
+
+            <a href="/signups" class='button'>View Signups</a><br>
+            <a href="/credits" class="button">View Credits</a><br>
+            <a href="/debit"  class="button">Add Debits</a><br>
+            <a href="/debits"  class="button">View Debits </a><br>
+
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Debits</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Sign Up - Cafe Volunteer Portal</title>
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+
+<body>
+    <h1>Debits</h1>
+    <table border="1">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Date</th>
+                <th>Amount Spent</th>
+                <th>Balance</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for debit in debits %}
+            <tr>
+                <td>{{ debit.name }}</td>
+                <td>{{ debit.date }}</td>
+                <td>{{ debit.amount_spent }}</td>
+                <td>{{ debit.balance }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <a href="/">Back to Home</a>
+</body>
+
+</html>

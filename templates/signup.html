@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Up - Cafe Volunteer Portal</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <section id="sign-up" class="form-container">
+        <h2>Shift Sign-Up</h2>
+        <form id="signup-form" action="/signup" method="POST">
+            <label for="name">Name</label>
+            <input type="text" id="name" name="name" required>
+        
+            <label for="email">Email</label>
+            <input type="email" id="email" name="email" required>
+        
+            <label for="shift-date">Shift Date (Mon-Fri)</label>
+            <input type="date" id="date" name="date" required>
+        
+            <label for="shift-time">Shift Time</label>
+            <select id="shift-time" name="shift-time">
+                <option value="14:00-17:00">14:00 - 17:00</option>
+                <option value="14:30-17:00">14:30 - 17:00</option>
+                <option value="15:00-17:00">15:00 - 17:00</option>
+                <option value="15:30-17:00">15:30 - 17:00</option>
+                <option value="16:00-17:00">16:00 - 17:00</option>
+            </select>
+        
+            <button type="submit">Sign Up</button>
+            <p id="signup-message">{{ signup_message }}</p>
+        </form>
+    </section>
+</body>
+</html>
