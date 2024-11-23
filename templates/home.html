@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Welcome - Cafe Volunteer Portal</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
 </head>
+
 <body>
     <div class="container">
         <header>
@@ -13,14 +15,37 @@
             <p>Sign up to volunteer or confirm your shift attendance.</p>
         </header>
         <div class="button-group">
-            <a href="/signup" class="button">Sign Up for a Shift</a><br>
-
-            <a href="/signups" class='button'>View Signups</a><br>
-            <a href="/credits" class="button">View Credits</a><br>
-            <a href="/debit"  class="button">Add Debits</a><br>
-            <a href="/debits"  class="button">View Debits </a><br>
-
+            <a href="/signup" class="button">Sign Up for a Shift</a>
+            <a href="/confirm" class="button">Confirm Attendance</a>
+            <a href="/signups" class="button">View Signups</a>
+            <a href="/credits" class="button">View Credits</a>
+            <a href="/debit" class="button">Add Debits</a>
+            <a href="/debits" class="button">View Debits</a>
         </div>
+        <section>
+            <h2>Today's Signups</h2>
+            {% if today_signups %}
+            <table>
+                <tr>
+                    <th>Name</th>
+                    <th>Date</th>
+                    <th>Start Time</th>
+                    <th>End Time</th>
+                </tr>
+                {% for signup in today_signups %}
+                <tr>
+                    <td>{{ signup.name }}</td>
+                    <td>{{ signup.date }}</td>
+                    <td>{{ signup.start_time }}</td>
+                    <td>{{ signup.end_time }}</td>
+                </tr>
+                {% endfor %}
+            </table>
+            {% else %}
+            <p>No signups for today yet!</p>
+            {% endif %}
+        </section>
     </div>
 </body>
+
 </html>

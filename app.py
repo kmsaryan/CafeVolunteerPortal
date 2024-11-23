@@ -15,7 +15,11 @@ def get_db_connection():
 # Home route
 @app.route("/")
 def index():
-    return render_template("home.html")
+    conn = get_db_connection()
+    today = datetime.now().strftime("%Y-%m-%d")
+    today_signups = conn.execute("SELECT * FROM Signups WHERE date = ?", (today,)).fetchall()
+    conn.close()
+    return render_template("home.html", today_signups=today_signups)
 
 # Route to view signups
 @app.route("/signups")
@@ -31,107 +35,140 @@ def signup():
     if request.method == "POST":
         name = request.form["name"]
         date = request.form["date"]
-        shift_time = request.form['shift-time']
+        shift_time = request.form["shift-time"]
         start_time, end_time = shift_time.split('-')
-
-        # Calculate duration
-        start_time_dt = datetime.strptime(start_time.strip(), '%H:%M')
-        end_time_dt = datetime.strptime(end_time.strip(), '%H:%M')
-        duration = (end_time_dt - start_time_dt).seconds / 3600
 
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        # Check if the volunteer worked on the previous day
-        last_entry = cursor.execute("""
-            SELECT date FROM Signups WHERE name = ? ORDER BY date DESC LIMIT 1
-        """, (name,)).fetchone()
+        # Check for duplicate signups
+        duplicate = cursor.execute("""
+            SELECT * FROM Signups WHERE name = ? AND date = ?
+        """, (name, date)).fetchone()
+        if duplicate:
+            conn.close()
+            return render_template("signup.html", signup_message="You have already signed up for this date!")
 
-        if last_entry:
-            last_date = datetime.strptime(last_entry["date"], "%Y-%m-%d")
-            signup_date = datetime.strptime(date, "%Y-%m-%d")
-            if (signup_date - last_date).days == 1:
-                conn.close()
-                return "Volunteer cannot work on consecutive days!", 400
+        # Check if fewer than two workers are signed up
+        worker_count = cursor.execute("""
+            SELECT COUNT(*) AS count FROM Signups WHERE date = ?
+        """, (date,)).fetchone()["count"]
+        if worker_count >= 2:
+            conn.close()
+            return render_template("signup.html", signup_message="This date already has enough workers!")
 
         # Insert the new signup
         cursor.execute("""
-            INSERT INTO Signups (name, date, start_time, end_time) 
+            INSERT INTO Signups (name, date, start_time, end_time)
             VALUES (?, ?, ?, ?)
-        """, (name, date, start_time, end_time))
+        """, (name, date, start_time.strip(), end_time.strip()))
+        conn.commit()
+        conn.close()
+        return redirect(url_for("view_signups"))
+
+    return render_template("signup.html", signup_message=None)
+
+# Route to handle attendance confirmation and update Credits table
+@app.route("/confirm", methods=["POST", "GET"])
+def confirm_attendance():
+    if request.method == "POST":
+        name = request.form["name"]
+        shift_date = request.form["shift-date"]
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Fetch signup details for the given name and date
+        signup = cursor.execute("""
+            SELECT * FROM Signups WHERE name = ? AND date = ? LIMIT 1
+        """, (name, shift_date)).fetchone()
+
+        if not signup:
+            conn.close()
+            return render_template("confirm.html", confirm_message="Signup not found!")
+
+        if signup["attendance"] == "Confirmed":
+            conn.close()
+            return render_template("confirm.html", confirm_message="Attendance already confirmed!")
+
+        # Calculate credits earned
+        start_time = datetime.strptime(signup["start_time"], "%H:%M")
+        end_time = datetime.strptime(signup["end_time"], "%H:%M")
+        duration = (end_time - start_time).seconds / 3600
+        amount_made = duration * 20
+
+        # Calculate the updated balance considering debits
+        total_credits = cursor.execute("""
+            SELECT COALESCE(SUM(amount_made), 0) AS total_credits FROM Credits WHERE name = ?
+        """, (name,)).fetchone()["total_credits"]
+
+        total_debits = cursor.execute("""
+            SELECT COALESCE(SUM(amount_spent), 0) AS total_debits FROM Debits WHERE name = ?
+        """, (name,)).fetchone()["total_debits"]
+
+        current_balance = total_credits - total_debits + amount_made
+
+        # Update attendance and add entry to Credits
+        cursor.execute("UPDATE Signups SET attendance = 'Confirmed' WHERE id = ?", (signup["id"],))
+        cursor.execute("""
+            INSERT INTO Credits (name, date, amount_made, balance) VALUES (?, ?, ?, ?)
+        """, (name, shift_date, amount_made, current_balance))
         conn.commit()
         conn.close()
 
-        return redirect(url_for("view_signups"))
+        return render_template("confirm.html", confirm_message="Attendance confirmed successfully!")
 
-    return render_template("signup.html")
+    # GET request
+    return render_template("confirm.html", confirm_message="")
 
-# Route to confirm attendance and update Credits table
-@app.route("/confirm/<int:signup_id>", methods=["POST"])
-def confirm_attendance(signup_id):
-    conn = get_db_connection()
-    cursor = conn.cursor()
 
-    # Fetch signup details
-    signup = cursor.execute("SELECT * FROM Signups WHERE id = ?", (signup_id,)).fetchone()
-    if not signup:
-        conn.close()
-        return "Signup not found!", 404
 
-    if signup["attendance"] == "Confirmed":
-        conn.close()
-        return "Attendance already confirmed!", 400
-
-    # Calculate credits earned
-    start_time = datetime.strptime(signup["start_time"], "%H:%M")
-    end_time = datetime.strptime(signup["end_time"], "%H:%M")
-    duration = (end_time - start_time).seconds / 3600
-    amount_made = duration * 20
-
-    # Get the last balance from the Credits table
-    last_balance = cursor.execute("""
-        SELECT balance FROM Credits WHERE name = ? ORDER BY date DESC LIMIT 1
-    """, (signup["name"],)).fetchone()
-    new_balance = (last_balance["balance"] if last_balance else 0) + amount_made
-
-    # Update attendance and add entry to Credits
-    cursor.execute("UPDATE Signups SET attendance = 'Confirmed' WHERE id = ?", (signup_id,))
-    cursor.execute("""
-        INSERT INTO Credits (name, date, amount_made, balance) VALUES (?, ?, ?, ?)
-    """, (signup["name"], signup["date"], amount_made, new_balance))
-    conn.commit()
-    conn.close()
-
-    return redirect(url_for("view_signups"))
-
-# Route to handle debit transactions
-@app.route("/debit", methods=["POST","GET"])
+@app.route("/debit", methods=["GET", "POST"])
 def add_debit():
-    name = request.form["name"]
-    date = request.form["date"]
-    amount_spent = float(request.form["amount_spent"])
+    if request.method == "POST":
+        # Handle the form submission
+        try:
+            name = request.form["name"]
+            date = request.form["date"]
+            amount_spent = float(request.form["amount_spent"])
+        except KeyError as e:
+            return f"Missing field: {e.args[0]}", 400
 
-    conn = get_db_connection()
-    cursor = conn.cursor()
+        conn = get_db_connection()
+        cursor = conn.cursor()
 
-    # Get the last balance from the Credits table
-    last_balance = cursor.execute("""
-        SELECT balance FROM Credits WHERE name = ? ORDER BY date DESC LIMIT 1
-    """, (name,)).fetchone()
-    if not last_balance or last_balance["balance"] < amount_spent:
+        # Calculate the updated balance considering both Credits and Debits
+        total_credits = cursor.execute("""
+            SELECT COALESCE(SUM(amount_made), 0) AS total_credits FROM Credits WHERE name = ?
+        """, (name,)).fetchone()["total_credits"]
+
+        total_debits = cursor.execute("""
+            SELECT COALESCE(SUM(amount_spent), 0) AS total_debits FROM Debits WHERE name = ?
+        """, (name,)).fetchone()["total_debits"]
+
+        current_balance = total_credits - total_debits
+
+        # Check if the balance is sufficient
+        if current_balance < amount_spent:
+            conn.close()
+            return "Insufficient balance!", 400
+
+        # Calculate the new balance
+        new_balance = current_balance - amount_spent
+
+        # Add entry to the Debits table
+        cursor.execute("""
+            INSERT INTO Debits (name, date, amount_spent, balance) VALUES (?, ?, ?, ?)
+        """, (name, date, amount_spent, new_balance))
+        conn.commit()
         conn.close()
-        return "Insufficient balance!", 400
 
-    # Calculate the new balance
-    new_balance = last_balance["balance"] - amount_spent
+        return redirect(url_for("view_debits"))
 
-    # Add entry to Debits table
-    cursor.execute("""
-        INSERT INTO Debits (name, date, amount_spent, balance) VALUES (?, ?, ?, ?)
-    """, (name, date, amount_spent, new_balance))
-    conn.commit()
-    conn.close()
+    # Render the debit form for a GET request
     return render_template("debit_entry.html")
+
+
 
 
 # Route to view debits

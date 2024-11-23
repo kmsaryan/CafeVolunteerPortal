@@ -1,85 +1,161 @@
-/* General Styles */
+/* General styles */
 body {
     font-family: Arial, sans-serif;
+    line-height: 1.6;
     margin: 0;
     padding: 0;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    flex-direction: column;
-    background-color: #f5f5f5;
-}
-
-.container {
-    text-align: center;
-    margin-top: 50px;
-}
-
-h1, h2 {
+    background-color: #f4f4f4;
     color: #333;
 }
 
-p {
-    color: #666;
+.container {
+    max-width: 800px;
+    margin: 20px auto;
+    padding: 20px;
+    background: #fff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
 }
 
-.button-group {
-    margin: 20px;
+/* Header styles */
+header h1 {
+    margin-bottom: 15px;
+    font-size: 1.8rem;
+    color: #007BFF;
 }
 
+header p {
+    font-size: 1.1rem;
+    color: #555;
+}
+
+/* Button styles */
+button,
 .button {
-    text-decoration: none;
-    color: white;
-    background-color: #007bff;
-    padding: 10px 20px;
-    border-radius: 5px;
-    margin: 10px;
     display: inline-block;
-    transition: background-color 0.3s;
+    padding: 10px 15px;
+    background: #007BFF;
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background-color 0.3s ease-in-out, transform 0.2s ease-in-out;
 }
 
+button:hover,
 .button:hover {
     background-color: #0056b3;
+    transform: translateY(-2px);
 }
 
-/* Form Styles */
-.form-container {
-    width: 300px;
-    padding: 20px;
-    margin-top: 20px;
-    background-color: #ffffff;
-    border: 1px solid #ddd;
-    border-radius: 10px;
-}
-
-label {
-    font-weight: bold;
-    display: block;
-    margin-top: 10px;
-}
-
-input, select, button {
+/* Table styles */
+table {
     width: 100%;
-    padding: 8px;
-    margin-top: 5px;
+    border-collapse: collapse;
+    margin: 20px 0;
+    font-size: 1rem;
+    background-color: #fff;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+table th,
+table td {
+    padding: 12px 15px;
+    border-bottom: 1px solid #ddd;
+    text-align: left;
+    font-size: 0.9rem;
+}
+
+table th {
+    background-color: #007BFF;
+    color: white;
+    text-transform: uppercase;
+    font-weight: bold;
+}
+
+table tr:hover {
+    background-color: #f4f8ff;
+}
+
+/* Responsive table styles */
+@media (max-width: 600px) {
+    table {
+        display: block;
+        overflow-x: auto;
+        white-space: nowrap;
+    }
+
+    table th,
+    table td {
+        font-size: 0.8rem;
+    }
+}
+
+/* Form styles */
+form {
+    margin: 20px 0;
+}
+
+form label {
+    display: block;
+    font-weight: bold;
+    margin-bottom: 5px;
+    color: #555;
+}
+
+form input,
+form select,
+form button {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 15px;
     border: 1px solid #ddd;
     border-radius: 5px;
     box-sizing: border-box;
 }
 
-button {
-    background-color: #28a745;
-    color: white;
-    font-weight: bold;
-    cursor: pointer;
+form input:focus,
+form select:focus {
+    border-color: #007BFF;
+    outline: none;
 }
 
-button:hover {
-    background-color: #218838;
+/* Mobile-first form adjustments */
+@media (max-width: 600px) {
+
+    form input,
+    form select,
+    form button {
+        font-size: 0.9rem;
+        padding: 8px;
+    }
 }
 
-#signup-message, #confirm-message {
-    color: #ff0000;
+/* Miscellaneous styles */
+a {
+    color: #007BFF;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+#signup-message,
+#confirm-message {
+    font-size: 1rem;
+    color: #007BFF;
     margin-top: 10px;
+}
+.confirmed {
+    color: green;
+    font-weight: bold;
+}
+
+.pending {
+    color: orange;
     font-weight: bold;
 }
