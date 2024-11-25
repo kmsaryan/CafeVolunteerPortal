@@ -1,4 +1,4 @@
-# Credits and Debits Expen
+# Credits and Debits StudentCafe
 
 ## Overview
 
